@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Interactive Moving Background Demo</title>
+<style>
+  :root{ --ui-bg: rgba(255,255,255,0.85); --accent:#0b84ff }
+  html,body{height:100%;margin:0;font-family: "DejaVu Sans", Arial, sans-serif;background:#111;color:#222}
+  .stage{position:relative;overflow:hidden;height:100vh;display:flex;align-items:center;justify-content:center}
+  .bg-layer{position:absolute;inset:0;will-change:transform;}
+  .bg-layer img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform-origin:center;transition:filter 250ms linear}
+  .overlay{position:absolute;inset:0;background:transparent;pointer-events:none}
+  .content{position:relative;z-index:40;max-width:900px;padding:28px;border-radius:12px;background:var(--ui-bg);box-shadow:0 8px 30px rgba(2,6,23,0.6)}
+  .controls{position:fixed;right:18px;top:18px;width:320px;background:rgba(255,255,255,0.96);padding:12px;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,0.25);z-index:60}
+  label{display:block;font-size:13px;margin:8px 0 6px;color:#333}
+  input[type=range]{width:100%}
+  select,input,button{width:100%;padding:8px;border-radius:6px;border:1px solid #ccc;font-size:14px}
+  .row{display:flex;gap:8px}
+  .small{width:50%}
+  .preset-buttons{display:flex;gap:6px;margin-top:8px}
+  .preset-buttons button{flex:1}
+  footer{position:fixed;left:18px;bottom:18px;color:#eee;z-index:70;font-size:13px}
+  @keyframes pan-left{from{transform:translateX(0)}to{transform:translateX(-10%)}}
+  @keyframes pan-right{from{transform:translateX(0)}to{transform:translateX(10%)}}
+  @keyframes zoom-in{from{transform:scale(1)}to{transform:scale(1.12)}}
+  @keyframes zoom-out{from{transform:scale(1.12)}to{transform:scale(1)}}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="bg-layer" id="bgLayer">
+    <img id="bgImage" alt="Background" src="" />
+  </div>
+  <div class="overlay" id="overlay"></div>
+  <div class="content">
+    <h1>Interactive moving background</h1>
+    <p>Use the control panel to upload an image and control animation, speed, parallax, blur and overlay.</p>
+  </div>
+</div>
+<div class="controls" id="controls">
+  <label for="file">Upload background image</label>
+  <input id="file" type="file" accept="image/*">
+
+  <label for="preset">Animation preset</label>
+  <select id="preset">
+    <option value="static">Static</option>
+    <option value="pan-left">Pan left</option>
+    <option value="pan-right">Pan right</option>
+    <option value="zoom-in">Zoom in</option>
+    <option value="zoom-out">Zoom out</option>
+    <option value="rotate">Rotate slowly</option>
+  </select>
+
+  <label for="speed">Speed (seconds per loop)</label>
+  <input id="speed" type="range" min="4" max="60" value="18">
+
+  <div class="row">
+    <div>
+      <label for="parallax"><input id="parallax" type="checkbox"> Enable mouse parallax</label>
+    </div>
+    <div>
+      <label for="loop"><input id="loop" type="checkbox" checked> Loop</label>
+    </div>
+  </div>
+
+  <label for="blur">Blur (px)</label>
+  <input id="blur" type="range" min="0" max="12" value="0">
+
+  <label for="opacity">Overlay opacity</label>
+  <input id="opacity" type="range" min="0" max="100" value="0">
+
+  <label for="overlayColor">Overlay color</label>
+  <input id="overlayColor" type="color" value="#000000">
+
+  <div style="margin-top:10px">
+    <button id="reset">Reset to defaults</button>
+  </div>
+</div>
+<footer>Demo — supports image upload, presets, speed, parallax, blur & overlay</footer>
+<script>
+const bgImage = document.getElementById('bgImage');
+const preset = document.getElementById('preset');
+const speed = document.getElementById('speed');
+const parallax = document.getElementById('parallax');
+const blur = document.getElementById('blur');
+const file = document.getElementById('file');
+const overlay = document.getElementById('overlay');
+const overlayColor = document.getElementById('overlayColor');
+const opacity = document.getElementById('opacity');
+const reset = document.getElementById('reset');
+const loopChk = document.getElementById('loop');
+let currentAnim = '';
+let mouseEnabled = false;
+
+function applyBlur(){ bgImage.style.filter = `blur(${parseInt(blur.value)}px)` }
+function applyOverlay(){ overlay.style.background = hexToRgba(overlayColor.value, opacity.value/100) }
+
+function hexToRgba(hex, a){
+  const c = hex.replace('#','');
+  const r = parseInt(c.substring(0,2),16);
+  const g = parseInt(c.substring(2,4),16);
+  const b = parseInt(c.substring(4,6),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+function setPreset(p){
+  const layer = document.getElementById('bgLayer');
+  layer.style.animation = 'none';
+  bgImage.style.transition = 'transform 400ms linear';
+  bgImage.style.transform = 'translate3d(0,0,0)';
+  bgImage.style.animation = '';
+  if(p === 'static') return;
+  const dur = Math.max(1, parseInt(speed.value));
+  if(p === 'pan-left' || p === 'pan-right'){
+    const amt = p === 'pan-left' ? '-10%' : '10%';
+    // Use CSS animation on the image's transform
+    bgImage.style.animation = `move-${p} ${dur}s linear ${loopChk.checked ? 'infinite' : ''}`;
+    // inject keyframes dynamically
+    ensureKeyframes(p, amt);
+  } else if(p === 'zoom-in' || p === 'zoom-out'){
+    const name = p === 'zoom-in' ? 'zoom-in' : 'zoom-out';
+    bgImage.style.animation = `${name} ${dur}s linear ${loopChk.checked ? 'infinite' : ''}`;
+  } else if(p === 'rotate'){
+    bgImage.style.animation = `rotate-slow ${dur}s linear ${loopChk.checked ? 'infinite' : ''}`;
+    ensureRotateKeyframe();
+  }
+}
+
+function ensureKeyframes(p, amt){
+  const id = `kf-${p}`;
+  if(document.getElementById(id)) return;
+  const style = document.createElement('style');
+  style.id = id;
+  style.innerHTML = `@keyframes move-${p}{from{transform:translate3d(0,0,0)}to{transform:translate3d(${amt},0,0)}}`;
+  document.head.appendChild(style);
+}
+function ensureRotateKeyframe(){
+  if(document.getElementById('kf-rotate')) return;
+  const style = document.createElement('style');
+  style.id = 'kf-rotate';
+  style.innerHTML = `@keyframes rotate-slow{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`;
+  document.head.appendChild(style);
+}
+
+file.addEventListener('change', e=>{
+  const f = e.target.files && e.target.files[0];
+  if(!f) return;
+  const reader = new FileReader();
+  reader.onload = ev => { bgImage.src = ev.target.result };
+  reader.readAsDataURL(f);
+});
+
+preset.addEventListener('change', ()=>{ setPreset(preset.value) });
+speed.addEventListener('input', ()=>{ setPreset(preset.value) });
+blur.addEventListener('input', applyBlur);
+overlayColor.addEventListener('input', applyOverlay);
+opacity.addEventListener('input', applyOverlay);
+loopChk.addEventListener('change', ()=> setPreset(preset.value));
+
+reset.addEventListener('click', ()=>{
+  document.getElementById('file').value = '';
+  bgImage.src = '';
+  preset.value = 'static';
+  speed.value = 18;
+  blur.value = 0; applyBlur();
+  overlayColor.value = '#000000'; opacity.value = 0; applyOverlay();
+  parallax.checked = false; loopChk.checked = true;
+  setPreset('static');
+});
+
+// Parallax handling
+let parallaxDepth = 20; // px shift
+const stage = document.querySelector('.stage');
+stage.addEventListener('mousemove', e => {
+  if(!parallax.checked) return;
+  const rect = stage.getBoundingClientRect();
+  const x = (e.clientX - rect.left)/rect.width - 0.5; // -0.5..0.5
+  const y = (e.clientY - rect.top)/rect.height - 0.5;
+  bgImage.style.transform = `translate3d(${x * parallaxDepth}px, ${y * parallaxDepth}px, 0) scale(1.04)`;
+});
+stage.addEventListener('mouseleave', ()=>{ if(!parallax.checked) bgImage.style.transform = 'translate3d(0,0,0)'; });
+
+// Init
+applyBlur(); applyOverlay(); setPreset('static');
+
+</script>
+</body>
+</html>

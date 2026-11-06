@@ -1,0 +1,151 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #15161d;
+  color: #e8e8ee;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+.app {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.nav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.sep {
+  color: #4a4c5c;
+}
+
+.line {
+  border: none;
+  border-top: 1px solid #2a2c38;
+  margin: 16px 0 24px;
+}
+
+h1 {
+  text-align: center;
+  font-size: 28px;
+}
+
+h2 {
+  font-size: 18px;
+  margin-top: 0;
+}
+
+.link {
+  background: none;
+  border: none;
+  color: #6aa7ff;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 15px;
+  padding: 4px;
+}
+
+.link:hover {
+  color: #9cc4ff;
+}
+
+.muted {
+  color: #8b8d9e;
+}
+
+.small {
+  font-size: 13px;
+}
+
+.error {
+  color: #ff5c5c;
+  text-align: center;
+}
+
+.btn {
+  display: inline-block;
+  background: #2d6cdf;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 9px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.btn.danger {
+  background: #b3343f;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: #b9bbc8;
+}
+
+.form input {
+  background: #1c1e27;
+  border: 1px solid #313443;
+  border-radius: 6px;
+  padding: 9px;
+  color: white;
+  font-size: 14px;
+}
+
+.panel {
+  background: #1b1d26;
+  border: 1px solid #292c39;
+  border-radius: 10px;
+  padding: 18px;
+  margin-bottom: 18px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.card {
+  background: #1b1d26;
+  border: 1px solid #292c39;
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.card h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #272936;
+}
